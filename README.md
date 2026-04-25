@@ -36,8 +36,6 @@ flowchart LR
   D -->|streamed tokens| B
   B --> E[Postgres Memory (Mike long-term)]
   B -.-> F[Blue Sky (patch generator)]
-  style B fill:#1f2937,stroke:#fff,stroke-width:1px,color:#fff
-  style C fill:#0f172a,stroke:#fff,stroke-width:1px,color:#fff
 ```
 
 Sequence (Rust ↔ Bash IPC):
