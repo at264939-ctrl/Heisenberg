@@ -1,253 +1,422 @@
+<div align="center">
 
-# Heisenberg — Local Autonomous AI Companion
-
-[![Repo](https://img.shields.io/badge/GitHub-Heisenberg-blue)](https://github.com/at264939-ctrl/Heisenberg) [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-
-**Runs GGUF 9B-class models locally within a 3 GB RAM budget using adaptive TurboQuant strategies**
-
-Heisenberg is a production-oriented, fully local autonomous agent designed for constrained hardware (Linux and macOS). It combines a high-performance Rust core for reasoning, orchestration, and memory control with a Bash-first operational layer for system integration and auditable execution.
-
-Key design goals:
-
-- Local-only inference with GGUF models (no cloud).
-- Strict memory budget (3 GB hard cap) with graceful degradation.
-- Bash as a first-class runtime for system integration and sandboxed execution.
-- Extensible orchestration for code editing, file ops, browser automation (sandboxed), and long-term memory.
-
----
-
-## Quick Navigation
-
-- Repository: https://github.com/at264939-ctrl/Heisenberg
-- Models: Put `.gguf` files in the `models/` folder.
-- Build: `./scripts/build.sh`
-- Run: `Heisenberg` or `./scripts/say-my-name.sh`
-
----
-
-## Visual Architecture (Mermaid)
-
-```mermaid
-```mermaid
-flowchart LR
-  A["User Terminal"] --> B["Heisenberg Rust Orchestrator"]
-  B -->|issues structured JSON| C["Bash Execution Layer"]
-  C -->|returns JSON| B
-  B --> D["The Lab (llama-cpp)"]
-  D -->|streamed tokens| B
-  B --> E["Postgres Memory (Mike long-term)"]
-  B -.-> F["Blue Sky (patch generator)"]
+```
+██╗  ██╗███████╗██╗███████╗███████╗███╗   ██╗██████╗ ███████╗██████╗  ██████╗
+██║  ██║██╔════╝██║██╔════╝██╔════╝████╗  ██║██╔══██╗██╔════╝██╔══██╗██╔════╝
+███████║█████╗  ██║███████╗█████╗  ██╔██╗ ██║██████╔╝█████╗  ██████╔╝██║  ███╗
+██╔══██║██╔══╝  ██║╚════██║██╔══╝  ██║╚██╗██║██╔══██╗██╔══╝  ██╔══██╗██║   ██║
+██║  ██║███████╗██║███████║███████╗██║ ╚████║██████╔╝███████╗██║  ██║╚██████╔╝
+╚═╝  ╚═╝╚══════╝╚═╝╚══════╝╚══════╝╚═╝  ╚═══╝╚═════╝ ╚══════╝╚═╝  ╚═╝ ╚═════╝
 ```
 
-Sequence (Rust ↔ Bash IPC):
+### *"I am the one who knocks."*
+
+<br/>
+
+[![GitHub Stars](https://img.shields.io/github/stars/at264939-ctrl/Heisenberg?style=for-the-badge&color=gold&logo=github)](https://github.com/at264939-ctrl/Heisenberg/stargazers)
+[![GitHub Forks](https://img.shields.io/github/forks/at264939-ctrl/Heisenberg?style=for-the-badge&color=blue&logo=github)](https://github.com/at264939-ctrl/Heisenberg/network/members)
+[![License: MIT](https://img.shields.io/badge/License-MIT-brightgreen?style=for-the-badge&logo=opensourceinitiative)](LICENSE)
+[![Built with Rust](https://img.shields.io/badge/Built%20With-Rust-orange?style=for-the-badge&logo=rust)](https://www.rust-lang.org/)
+[![Runs Locally](https://img.shields.io/badge/Runs-100%25%20Local-purple?style=for-the-badge&logo=linux)](https://github.com/at264939-ctrl/Heisenberg)
+[![RAM Budget](https://img.shields.io/badge/RAM%20Budget-3%20GB-red?style=for-the-badge&logo=memory)](https://github.com/at264939-ctrl/Heisenberg)
+[![Models](https://img.shields.io/badge/Models-GGUF%209B%20Class-cyan?style=for-the-badge&logo=huggingface)](https://github.com/at264939-ctrl/Heisenberg)
+[![Platform](https://img.shields.io/badge/Platform-Linux%20%7C%20macOS-lightgrey?style=for-the-badge&logo=linux)](https://github.com/at264939-ctrl/Heisenberg)
+
+<br/>
+
+> **A fully local, production-grade autonomous AI agent.**
+> Runs 9B-class GGUF models on constrained hardware using adaptive **TurboQuant** strategies —
+> all within a strict **3 GB RAM budget**, no cloud required.
+
+<br/>
+
+[🚀 Quick Start](#-quick-start) · [🏗️ Architecture](#️-system-architecture) · [🧠 TurboQuant](#-turboQuant-engine) · [📁 Structure](#-project-structure) · [🔒 Security](#-security--privacy) · [☕ Support](#-support-me)
+
+</div>
+
+---
+
+## 🌟 What Is Heisenberg?
+
+**Heisenberg** is not just another AI wrapper. It is a **production-oriented autonomous agent** built from the ground up for developers who refuse to compromise on privacy, performance, or control.
+
+| Feature | Detail |
+|---|---|
+| 🧱 **Core Language** | Rust — zero-cost abstractions, memory safety, raw speed |
+| 🤖 **Inference Engine** | llama-cpp via FFI/subprocess (GGUF native) |
+| 💾 **Memory Model** | Adaptive 3 GB hard cap with graceful degradation |
+| 🐚 **Execution Layer** | Bash-first, auditable, sandboxed via `ulimit` |
+| 🧬 **Long-term Memory** | PostgreSQL (`mike` module) |
+| 🌐 **Browser Automation** | Sandboxed via `the_rv` + `scripts/drive.sh` |
+| ☁️ **Cloud Dependency** | **Zero** — fully offline, fully private |
+| 📦 **Model Format** | GGUF (drop `.gguf` in `models/` and go) |
+
+---
+
+## 🏗️ System Architecture
+
+### High-Level Flow
 
 ```mermaid
+flowchart TD
+    U(["👤 User Terminal"]) -->|natural language input| H
+
+    subgraph HEISENBERG ["🧪 Heisenberg Orchestrator (Rust)"]
+        H["🎯 REPL / Action Loop"]
+        H -->|structured JSON commands| J["🔧 Jesse\nBash Executor"]
+        H -->|inference requests| L["⚗️ The Lab\nllama-cpp + GGUF Loader"]
+        H -->|memory ops| M["🗄️ Mike\nMemory Manager"]
+        H -->|schedule tasks| G["⏱️ Gus\nScheduler"]
+        H -.->|self-patch| B["🔵 Blue Sky\nSelf-Modification"]
+        H -.->|screen events| K["👁️ Hank\nScreen Observer"]
+        H -.->|browser tasks| RV["🌐 The RV\nBrowser Sandbox"]
+    end
+
+    J -->|shell result JSON| H
+    L -->|streamed tokens| H
+    M <-->|read/write| DB[("🐘 PostgreSQL\nLong-term Memory")]
+    RV -->|page data| H
+
+    style HEISENBERG fill:#1a1a2e,stroke:#e94560,color:#fff
+    style U fill:#16213e,stroke:#0f3460,color:#fff
+    style DB fill:#0f3460,stroke:#533483,color:#fff
+```
+
+---
+
+### IPC Sequence: Rust ↔ Bash
+
 ```mermaid
 sequenceDiagram
-  participant R as Rust-Orch
-  participant S as CMD_FIFO
-  participant B as Bash-Worker
-  participant F as RESP_FIFO
+    autonumber
+    participant U  as 👤 User
+    participant R  as 🎯 Rust Orchestrator
+    participant CF as 📨 CMD_FIFO
+    participant BW as 🔧 Bash Worker (Jesse)
+    participant RF as 📩 RESP_FIFO
+    participant DB as 🗄️ PostgreSQL (Mike)
 
-  R->>S: write cmd: run, script: scripts/cook.sh
-  S->>B: Bash executes script (ulimit, sandbox)
-  B->>F: write status: ok, pid: 1234
-  F->>R: Rust reads response and continues
+    U->>R: "Analyze logs and summarize"
+    R->>CF: write {cmd: "run", script: "cook.sh", args: [...]}
+    CF->>BW: Execute script under ulimit sandbox
+    BW->>BW: Run, collect stdout/stderr
+    BW->>RF: write {status: "ok", pid: 1234, output: "..."}
+    RF->>R: Read response
+    R->>DB: Persist summary to long-term memory
+    DB-->>R: ACK
+    R-->>U: Stream result tokens
 ```
 
 ---
 
-## Project Layout (important paths)
+### TurboQuant Memory Planning Pipeline
+
+```mermaid
+flowchart LR
+    A["📂 GGUF Header Scan\n(layers, heads, dim, tokenizer)"]
+    --> B["📐 KV Cache Estimator\n(context × layers × heads × dtype)"]
+    --> C["📊 Memory Planner\n(weights + KV + OS overhead)"]
+
+    C --> D{"> 3 GB?"}
+    D -- YES --> E["⚡ Quantization Selector\nQ8_0 → Q5_0 → Q4_0"]
+    D -- YES --> F["📉 Context Reducer\n2048 → 1024 → 512"]
+    D -- NO  --> G["✅ Launch as-is"]
+    E --> H["🚀 cook.sh Launcher\nulimit -v 3072 MB"]
+    F --> H
+    G --> H
+
+    H --> I["🔍 Mike Live Monitor\n(RSS polling)"]
+    I -->|pressure detected| J["🔄 Runtime Mitigation\n(shrink ctx / cancel tasks)"]
+    J --> I
+
+    style D fill:#e94560,stroke:#c23152,color:#fff
+    style H fill:#0f3460,stroke:#533483,color:#fff
+    style I fill:#16213e,stroke:#e94560,color:#fff
+```
+
+---
+
+## 🔬 Module Reference
+
+Each module in `src/` has a named role inspired by *Breaking Bad* — intentional, consistent, and memorable.
+
+```mermaid
+mindmap
+  root((🧪 Heisenberg))
+    🎯 heisenberg
+      REPL loop
+      Action dispatcher
+      Agent state machine
+    ⚗️ the_lab
+      GGUF loader
+      llama-cpp FFI
+      TurboQuant Planner
+      Token streamer
+    🔧 jesse
+      Bash executor
+      FIFO IPC
+      ulimit sandbox
+      Script runner
+    ⏱️ gus
+      Task scheduler
+      Priority queue
+      Retry logic
+    🗄️ mike
+      Memory manager
+      PostgreSQL glue
+      Context compaction
+      Pressure monitor
+    ⚙️ saul
+      Config parser
+      CLI interface
+      Argument validation
+    👁️ hank
+      Screen observer
+      Event capture
+      Display hooks
+    🌐 the_rv
+      Browser sandbox
+      Automation layer
+      Allow-list engine
+    🔵 blue_sky
+      Self-modification
+      Patch generator
+      Safe apply
+```
+
+---
+
+## 📁 Project Structure
 
 ```
 Heisenberg/
-├── src/
-│   ├── heisenberg/   # orchestrator (REPL, action loop)
-│   ├── the_lab/       # inference, GGUF loader, llama-cpp integration
-│   ├── jesse/         # Bash executor (shell sandbox)
-│   ├── gus/           # scheduler
-│   ├── mike/          # memory manager + db glue
-│   ├── saul/          # config & CLI
-│   ├── hank/          # screen observer
-│   ├── the_rv/        # browser sandbox
-│   └── blue_sky/      # self-modification helpers
-├── scripts/
-│   ├── build.sh
-│   ├── say-my-name.sh
-│   ├── cook.sh
-│   └── drive.sh
-├── models/            # place .gguf files here (do not commit large files)
-├── sql/               # memory schema (Postgres)
-└── Cargo.toml
+│
+├── 📦 src/
+│   ├── heisenberg/      # 🎯 Orchestrator — REPL, action loop, agent state machine
+│   ├── the_lab/         # ⚗️  Inference engine — GGUF loader, llama-cpp, TurboQuant
+│   ├── jesse/           # 🔧 Bash executor — FIFO IPC, sandboxed shell worker
+│   ├── gus/             # ⏱️  Scheduler — task queue, priority, retries
+│   ├── mike/            # 🗄️  Memory manager — PostgreSQL glue, context compaction
+│   ├── saul/            # ⚙️  Config & CLI — argument parsing, env vars
+│   ├── hank/            # 👁️  Screen observer — display hooks, event capture
+│   ├── the_rv/          # 🌐 Browser sandbox — automation, allow-list control
+│   └── blue_sky/        # 🔵 Self-modification — patch generator, safe apply
+│
+├── 🛠️ scripts/
+│   ├── build.sh         # Full build (release mode)
+│   ├── say-my-name.sh   # Launch agent with shell UI
+│   ├── cook.sh          # Inference wrapper — ulimit enforcement
+│   └── drive.sh         # Browser automation entry point
+│
+├── 🤖 models/           # Drop your .gguf files here (do NOT commit large files)
+│   └── *.gguf
+│
+├── 🗃️ sql/              # PostgreSQL schema — long-term memory tables
+│
+└── 📋 Cargo.toml        # Rust workspace manifest
 ```
 
 ---
 
-## Installation & Quick Start
+## 🚀 Quick Start
 
-1. Ensure Rust toolchain is installed (Rust 1.70+ recommended) and `cargo` available.
-2. Place at least one `.gguf` model under `models/` (use Git LFS for large models if you intend to track them).
-3. Build and install locally:
+### Prerequisites
+
+| Requirement | Version | Check |
+|---|---|---|
+| Rust toolchain | 1.70+ | `rustc --version` |
+| Cargo | Latest stable | `cargo --version` |
+| PostgreSQL | 14+ (for Mike memory) | `psql --version` |
+| A GGUF model | 9B-class recommended | — |
+
+### Step-by-step
 
 ```bash
+# 1. Clone the repository
+git clone https://github.com/at264939-ctrl/Heisenberg.git
+cd Heisenberg
+
+# 2. Place your GGUF model
+cp /path/to/your/model.gguf models/
+# Recommended: Qwen3.5-9B-Uncensored-HauhauCS-Aggressive-Q4_K_M.gguf
+
+# 3. Build (release mode, optimized)
 ./scripts/build.sh
-```
 
-4. Launch the agent (shell UI):
-
-```bash
+# 4. Launch the agent
 Heisenberg
-# or
+# — or —
 ./scripts/say-my-name.sh chat
-```
 
-5. Example: get memory status (from the CLI):
-
-```bash
+# 5. Check system status
 Heisenberg status
 ```
 
----
-
-## Memory & Resource Strategy (Mike)
-
-- Heisenberg enforces a 3 GB hard memory cap via monitoring (`sysinfo`) and system-level controls. When pressure is detected the orchestrator takes progressive actions:
-  1. Shrink inference context / reduce KV cache.
-  2. Lower concurrency (single-threaded fallback for heavy ops).
-  3. Persist and compact long-term memory to PostgreSQL.
-  4. Drop nonessential buffers and disable expensive observers.
-
-Design emphasis: stay responsive under pressure rather than crash.
+> 💡 **Tip:** For large models (>2 GB), use Git LFS if you plan to track them in version control.
 
 ---
 
-## Security & Privacy
+## 🧠 TurboQuant Engine
 
-- All operations are local by default. No external APIs or telemetry are enabled.
-- Bash scripts are treated as first-class, auditable components; review `scripts/` before granting them execution.
-- Browser automation is allow-listed via `scripts/drive.sh` by default.
+> *The secret weapon that makes 9B-class models behave like small models.*
 
----
+TurboQuant is Heisenberg's adaptive runtime strategy layer. It solves a fundamental problem: **9B parameter models have massive KV caches** that expand with context length and easily exceed available RAM.
 
-## Extensibility
+### The Core Problem
 
-- Add new inference adaptors in `src/the_lab/` (preferred: FFI to llama-cpp; fallback: isolated subprocess).
-- Add new shell actions in `src/jesse/` and expose them via the IPC FIFO for auditable execution.
+```
+9B model weights (Q4_K_M) ≈ ~5.5 GB on disk
+But RAM usage during inference = weights + KV cache + OS overhead
+KV cache alone at context=2048 can push total usage well over 3 GB
+```
 
----
+### TurboQuant's 5-Stage Response
 
-## Support me ☕
+```
+Stage 1 → SCAN         Read GGUF header: layers, heads, hidden_dim, tokenizer
+Stage 2 → ESTIMATE     Calculate KV cache size for requested context window
+Stage 3 → PLAN         Aggregate: KV + mmap'd weights + tokenizer + OS overhead
+Stage 4 → ADAPT        If predicted > 3 GB: downgrade KV quant and/or reduce context
+Stage 5 → CONFINE      Launch via cook.sh with ulimit -v enforced at OS level
+```
 
-If you find this project helpful and would like to support its development, you can buy me a coffee via PayPal. Your support is greatly appreciated!
+### Live Example: Qwen3.5-9B on 3 GB RAM
 
-[![Donate with PayPal](https://img.shields.io/badge/Donate-PayPal-blue.svg)](https://www.paypal.com/ncp/payment/FYTDX2XYNGAJ8)
-
----
-
-## Contact
-
-- Email: ibrahimtarek1245@gmail.com
-- Phone / WhatsApp: +201030553763
-
-Repository: https://github.com/at264939-ctrl/Heisenberg
-
----
-
-## License
-
-This project is released under the MIT License.
-
----
-
-If you'd like diagrams exported as SVG assets or translations into other languages, I can generate and include them in `docs/`.
+| Step | Action | Value |
+|---|---|---|
+| Request | User asks for generation | `context = 2048` |
+| Scan | Read GGUF metadata | layers, heads, hidden_dim extracted |
+| Estimate | Compute KV cache | ~X MB for context=2048 |
+| Plan | Total predicted usage | Exceeds 3 GB cap ⚠️ |
+| Adapt | Select stronger KV quant | Q8_0 → Q5_0 → **Q4_0** |
+| Adapt | Reduce context if needed | 2048 → **1024** |
+| Launch | `cook.sh --mem-mb 3072` | ulimit enforced at OS level ✅ |
+| Monitor | `mike` polls RSS live | Mitigation triggered if needed |
 
 ---
 
-## Model Spotlight — Qwen3.5-9B-Uncensored-HauhauCS-Aggressive-Q4_K_M.gguf
+## 🔒 Security & Privacy
 
-The primary test model referenced in this repository is:
-
-- `models/Qwen3.5-9B-Uncensored-HauhauCS-Aggressive-Q4_K_M.gguf`
-
-This section explains, in technical detail, how TurboQuant is applied in Heisenberg to enable running this 9B-class GGUF model within a 3 GB RAM constraint.
-
-### Technical summary
-
-- The model is a 9 billion parameter GGUF file with Q4_K_M quantized weights. Even with weight quantization, the KV cache (key/value cache used during generation) and other runtime buffers can exceed available RAM unless actively managed.
-- Heisenberg implements an adaptive runtime called the TurboQuant Planner that analyzes model metadata, estimates working set requirements, and chooses runtime trade-offs (KV quantization level, context window size, concurrency limits) to remain within the configured hard memory cap.
-
-### TurboQuant placement in the pipeline
-
-1. GGUF header scan — `the_lab` inspects the model to extract architecture data: number of layers, hidden dimension, number of heads, and tokenizer information.
-2. Memory planning — the planner computes the expected KV cache size for a candidate context window and aggregates estimated sizes for mapped weights, tokenizer buffers, and OS overhead.
-3. Quantization selection — given the memory budget, the planner selects the strongest acceptable KV quantization (e.g., prefer Q8_0 → Q5_0 → Q4_0) and, when necessary, reduces the context window.
-4. Confined runtime — inference is executed via a controlled subprocess (recommended: llama-cpp CLI or `llama-server`) launched under `scripts/cook.sh` which applies `ulimit`-based virtual memory limits and logs resource usage.
-5. Live adaptation — `mike` monitors RSS and triggers runtime mitigation (shrink context, reduce concurrency, or cancel nonessential tasks) when pressure approaches the hard cap.
-
-### Practical runtime example for Qwen3.5-9B
-
-1. Client requests generation with `context=2048`.
-2. `the_lab` computes KV cache estimate (function of layers, heads, and context length).
-3. Memory planner aggregates estimates and predicts total usage.
-4. Predicted usage > 3GB → planner selects stronger KV quantization (e.g., Q5_0 or Q4_0) and/or reduces context to 1024.
-5. Orchestrator launches `cook.sh --mem-mb 3072 -- llama-server --model models/Qwen3.5-9B-...gguf --prompt "..."`.
-6. The process runs confined; `mike` enforces monitoring and can instruct the orchestrator to adjust parameters mid-run if required.
-
-### Why TurboQuant matters (concise)
-
-- TurboQuant emphasizes adaptive KV cache quantization and runtime planning rather than only weight quantization. This enables larger models to operate on machines with limited RAM by reducing the working set and avoiding duplicated weight copies.
-- The planner chooses the minimal acceptable quality for KV caching and dynamically balances latency vs memory footprint.
-
----
----
-
-## Model Spotlight — Qwen3.5-9B-Uncensored-HauhauCS-Aggressive-Q4_K_M.gguf
-
-The primary test model shipped with this workspace (place it in `models/`) is:
-
-- `models/Qwen3.5-9B-Uncensored-HauhauCS-Aggressive-Q4_K_M.gguf`
-
-This README emphasizes how TurboQuant is applied when loading and running this model on low-RAM machines.
-
-### Why this matters
-
-- The model is a 9B-class GGUF file quantized to `Q4_K_M` weights but still requires careful KV cache and runtime planning to stay below the 3 GB RAM cap.
-- TurboQuant is the set of runtime strategies used across `src/the_lab/` and the orchestrator to make this practical.
-
-### Where TurboQuant runs in the system
-
-- GGUF scanning: `the_lab` reads the model header to extract layer count, hidden-size, number of heads, and tokenizer metadata.
-- Memory Planner: a small planner computes KV cache size for a requested context window and the estimated working set (weights mmap + tokenizer buffers + OS overhead).
-- Quantizer/Selector: the planner picks the smallest safe KV quantization (e.g., prefer Q8_0 -> Q5_0 -> Q4_0 settings for the KV cache) and may reduce context window if needed.
-- Runtime behavior: inference runs via a streaming subprocess (llama-cpp CLI or `llama-server`) launched within the `scripts/cook.sh` wrapper to enforce ulimit virtual memory caps. This keeps the process confined and auditable.
-
-### Practical example (how it is applied to Qwen3.5-9B...)
-
-1. Orchestrator requests an inference with `context=2048`.
-2. `the_lab` scans `Qwen3.5-9B-...gguf` and computes KV cache ≈ X MB (based on layers, heads).
-3. Memory planner compares KV cache + mapped weights + baseline overhead vs 3 GB cap.
-4. If predicted usage > cap, planner selects a stronger KV quantization (reduce to Q5_0 or Q4_0) and/or trims context to 1024 or 512.
-5. `scripts/cook.sh --mem-mb 3072 -- llama-server --model models/Qwen3.5-9B-...gguf --prompt "..."`
-  - `cook.sh` sets `ulimit -v` to the configured cap so the OS will prevent runaway allocation.
-6. While running, `mike` monitors RSS; if pressure rises it instructs the orchestrator to shrink context or cancel nonessential tasks.
-
-### Why TurboQuant vs naive quant
-
-- TurboQuant is not only about storing weights in Q4 — it focuses on adaptive KV cache quantization and runtime resource planning so large models behave like small models in practice.
-- The system avoids duplicating weights in memory (use mmap when possible) and streams tokens rather than buffering entire responses.
+```
+┌─────────────────────────────────────────────────────────┐
+│                   SECURITY PRINCIPLES                   │
+│                                                         │
+│  ✅  100% local — zero external API calls               │
+│  ✅  Zero telemetry — no usage data ever leaves         │
+│  ✅  Bash scripts are auditable first-class citizens    │
+│  ✅  Browser automation is allow-listed by default      │
+│  ✅  ulimit enforced at OS level for all subprocesses   │
+│  ✅  FIFO-based IPC — no shared memory exploits         │
+│                                                         │
+│  ⚠️  Review scripts/ before granting execution perms   │
+└─────────────────────────────────────────────────────────┘
+```
 
 ---
 
-## شرح مبسّط بالعربية (مهمّة التركيز على TurboQuant)
+## ⚙️ Memory & Resource Strategy
 
-نقطة القوة في المشروع هي قدرة `TurboQuant Planner` على جعل موديل بحجم 9B قابلًا للتشغيل محليًا على جهاز ذا ذاكرة محدودة (3 جيجابايت). الفكرة الأساسية:
+Heisenberg enforces a **3 GB hard memory cap** via `sysinfo` monitoring. When RAM pressure is detected, the orchestrator responds progressively:
 
-- نفكّر باستمرار بالـ KV cache (الذي يكبر مع طول السياق) ونقيسه مقابل ذاكرة النظام.
-- نقوم بمسح رأس ملف الـ GGUF لاستخراج مواصفات النموذج وتحليل حجم الـ KV cache المطلوب.
-- إذا تجاوزت التوقعات السقف (3GB)، نقوم تلقائيًا بتقليل جودة KV cache (اختيار إعدادات كمية أقوى) أو تقليل نافذة السياق.
-- كل استدعاء inference يُشغّل داخل غلاف (wrapper) بشل آمن (`scripts/cook.sh`) مع حد ذاكرة افتراضي لتجنب انهيار النظام.
+```
+Level 1 — YELLOW  ▶  Shrink inference context + reduce KV cache size
+Level 2 — ORANGE  ▶  Lower concurrency → single-thread fallback for heavy ops
+Level 3 — RED     ▶  Persist + compact long-term memory to PostgreSQL
+Level 4 — CRITICAL▶  Drop nonessential buffers, disable expensive observers
+```
 
-النتيجة: يمكنك تشغيل `Qwen3.5-9B-Uncensored-...-Q4_K_M.gguf` على أجهزة محدودة الموارد، مع أداء متدرج وخيار تقليل الدقة أو السياق للحفاظ على الاستجابة.
+**Design philosophy:** *Stay responsive under pressure, never crash.*
 
 ---
 
+## 🔧 Extensibility
+
+### Add a new inference adaptor
+```
+src/the_lab/
+├── your_adaptor.rs    # Implement the InferenceAdaptor trait
+└── mod.rs             # Register your adaptor
+```
+> Preferred: FFI to llama-cpp. Fallback: isolated subprocess.
+
+### Add a new shell action
+```
+src/jesse/
+├── your_action.rs     # Define the action and its JSON schema
+└── mod.rs             # Register via FIFO IPC
+```
+
+---
+
+## 🌍 شرح TurboQuant بالعربية
+
+> نقطة القوة الحقيقية في Heisenberg هي قدرة `TurboQuant Planner` على تشغيل موديل 9B محليًا بذاكرة 3 جيجابايت فقط.
+
+**كيف يشتغل؟**
+
+1. **المسح:** نقرأ header ملف الـ GGUF ونستخرج مواصفات النموذج (عدد الطبقات، الأبعاد، عدد الـ heads)
+2. **التقدير:** نحسب حجم الـ KV cache المطلوب بناءً على طول السياق المطلوب
+3. **التخطيط:** نجمع: KV cache + الأوزان المحملة + overhead النظام ونقارن بالسقف
+4. **التكيّف:** لو التوقعات تجاوزت 3GB، نقلّل جودة الـ KV cache تلقائيًا أو نقلّص نافذة السياق
+5. **العزل:** نشغّل الـ inference داخل `cook.sh` مع `ulimit -v` لمنع أي تجاوز في الذاكرة
+
+**النتيجة:** تقدر تشغّل `Qwen3.5-9B-Q4_K_M.gguf` على جهاز عادي بدون سحاب، بدون خصوصية مكشوفة، وبأداء متدرج بدلًا من الانهيار.
+
+---
+
+## ☕ Support Me
+
+> *If Heisenberg helped you cook something great — consider buying me a coffee.*
+
+Building and maintaining a production-grade local AI agent takes serious time and effort. If this project saved you hours of work or sparked something useful in your own projects, your support means the world.
+
+[![Donate with PayPal](https://img.shields.io/badge/Donate-PayPal-00457C?style=for-the-badge&logo=paypal&logoColor=white)](https://www.paypal.com/ncp/payment/FYTDX2XYNGAJ8)
+
+Every contribution — big or small — goes directly toward:
+- 🖥️ Better hardware for testing on constrained environments
+- 🧪 Experimenting with new GGUF models and quantization strategies
+- 📚 Documentation, tutorials, and community support
+- ⚡ Continued active development of new features
+
+---
+
+## 📬 Contact
+
+Have questions, ideas, or want to collaborate? Reach out!
+
+| Channel | Info |
+|---|---|
+| 📧 **Email** | [ibrahimtarek1245@gmail.com](mailto:ibrahimtarek1245@gmail.com) |
+| 📱 **Phone / WhatsApp** | [+201030553763](https://wa.me/201030553763) |
+| 🐙 **GitHub** | [at264939-ctrl/Heisenberg](https://github.com/at264939-ctrl/Heisenberg) |
+
+> Feel free to open an [Issue](https://github.com/at264939-ctrl/Heisenberg/issues) or [Discussion](https://github.com/at264939-ctrl/Heisenberg/discussions) directly on GitHub for bugs, feature requests, or general feedback.
+
+---
+
+## 📄 License
+
+```
+MIT License — Copyright (c) Ibrahim Tarek
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software...
+```
+
+See the full [LICENSE](LICENSE) file for details.
+
+---
+
+<div align="center">
+
+**Built with ❤️ and Rust by [Ibrahim Tarek](mailto:ibrahimtarek1245@gmail.com)**
+
+*"Say my name."*
+
+[![GitHub](https://img.shields.io/badge/Star%20on-GitHub-black?style=for-the-badge&logo=github)](https://github.com/at264939-ctrl/Heisenberg)
+[![PayPal](https://img.shields.io/badge/Support-PayPal-00457C?style=for-the-badge&logo=paypal)](https://www.paypal.com/ncp/payment/FYTDX2XYNGAJ8)
+
+</div>
