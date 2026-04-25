@@ -9,6 +9,8 @@
 ╚═╝  ╚═╝╚══════╝╚═╝╚══════╝╚══════╝╚═╝  ╚═══╝╚═════╝ ╚══════╝╚═╝  ╚═╝ ╚═════╝
 ```
 
+<img src="https://raw.githubusercontent.com/at264939-ctrl/Heisenberg/main/the-cook-cropped.png" alt="Heisenberg" width="420"/>
+
 ### *"I am the one who knocks."*
 
 <br/>
