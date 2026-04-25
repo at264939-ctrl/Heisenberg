@@ -1,0 +1,52 @@
+
+# Rust build artifacts
+/target/
+
+# Ignore cargo intermediate files
+**/*.rs.bk
+
+# IDEs and editors
+/.idea/
+.vscode/
+*.iml
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+
+# Logs and runtime files
+*.log
+.cache/
+
+# Environment files / secrets
+.env
+*.pem
+*.key
+*.secret
+
+# Local binaries / installs
+/home/
+
+# Models and large binaries (place models locally; do not commit heavy .gguf files)
+/models/*.gguf
+/models/*.gguf.*
+/models/*.bin
+/models/*.ckpt
+
+# Temporary files
+*.tmp
+*.swp
+
+# Database / runtime artifacts
+*.sqlite
+/pgdata/
+
+# Coverage / test artifacts
+/coverage/
+
+# nix build output
+/result
+
+# Keep schema and Cargo.lock tracked (do not ignore)
