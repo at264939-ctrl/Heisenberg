@@ -28,28 +28,30 @@ Key design goals:
 ## Visual Architecture (Mermaid)
 
 ```mermaid
+```mermaid
 flowchart LR
-  A[User Terminal] --> B[Heisenberg Rust Orchestrator]
-  B -->|issues structured JSON| C[Bash Execution Layer]
+  A["User Terminal"] --> B["Heisenberg Rust Orchestrator"]
+  B -->|issues structured JSON| C["Bash Execution Layer"]
   C -->|returns JSON| B
-  B --> D[The Lab (llama-cpp)]
+  B --> D["The Lab (llama-cpp)"]
   D -->|streamed tokens| B
-  B --> E[Postgres Memory (Mike long-term)]
-  B -.-> F[Blue Sky (patch generator)]
+  B --> E["Postgres Memory (Mike long-term)"]
+  B -.-> F["Blue Sky (patch generator)"]
 ```
 
 Sequence (Rust ↔ Bash IPC):
 
 ```mermaid
+```mermaid
 sequenceDiagram
   participant R as Rust-Orch
-  participant S as /tmp/heisenberg_cmd.fifo
+  participant S as CMD_FIFO
   participant B as Bash-Worker
-  participant F as /tmp/heisenberg_resp.fifo
+  participant F as RESP_FIFO
 
-  R->>S: write {"cmd":"run","script":"scripts/cook.sh",...}
+  R->>S: write cmd: run, script: scripts/cook.sh
   S->>B: Bash executes script (ulimit, sandbox)
-  B->>F: write {"status":"ok","pid":1234}
+  B->>F: write status: ok, pid: 1234
   F->>R: Rust reads response and continues
 ```
 
